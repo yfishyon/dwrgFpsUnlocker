@@ -49,7 +49,7 @@ jobs:
         shell: cmd
         run: |
           git clone --depth 1 https://github.com/Skycoder42/QHotkey.git C:/qhotkey
-          cmake -B C:/qhotkey/build -S C:/qhotkey -DCMAKE_PREFIX_PATH=C:/Qt/6.8.0/msvc2022_64 -DQHOTKEY_EXAMPLES=OFF -DQHOTKEY_TESTS=OFF
+          cmake -B C:/qhotkey/build -S C:/qhotkey -DCMAKE_PREFIX_PATH=C:/Qt/6.8.0/msvc2022_64 -DQHOTKEY_QT6=ON -DQHOTKEY_EXAMPLES=OFF -DQHOTKEY_TESTS=OFF
           cmake --build C:/qhotkey/build --config Release
           cmake --install C:/qhotkey/build --prefix C:/qhotkey/install
 
