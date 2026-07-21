@@ -44,7 +44,6 @@ jobs:
       - name: Install deps via vcpkg
         run: |
           vcpkg install yalantinglibs:x64-windows
-          vcpkg install minizip-ng:x64-windows
 
       - name: Build QHotKey
         shell: cmd
@@ -56,7 +55,7 @@ jobs:
           cmake --install build --prefix install
 
       - name: Configure CMake (gui)
-        run: cmake -B build_gui -DBUILD_GUI=ON -DCMAKE_PREFIX_PATH="C:/Qt/6.8.0/msvc2022_64;C:/qhotkey/install" -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+        run: cmake -B build_gui -DBUILD_GUI=ON -DBUILD_SINGLE=ON -DCMAKE_PREFIX_PATH="C:/Qt/6.8.0/msvc2022_64;C:/qhotkey/install" -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
 
       - name: Build
         run: cmake --build build_gui --config Release
