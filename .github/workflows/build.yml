@@ -1,0 +1,71 @@
+name: build
+
+on:
+  push:
+    paths:
+      - common/**
+      - src_gui/**
+      - src_nogui/**
+      - updater/**
+      - resource/**
+      - CMakeLists.txt
+      - utilities.cmake
+      - .github/workflows/build.yml
+  workflow_dispatch:
+
+jobs:
+  build-nogui:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        with: { arch: x64 }
+      - run: vcpkg install yalantinglibs:x64-windows
+      - run: cmake -B build_nogui -DBUILD_GUI=OFF -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+      - run: cmake --build build_nogui --config Release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dwrgFpsUnlocker_nogui
+          path: build_nogui/src_nogui/Release/dwrgFpsUnlocker_nogui.exe
+
+  build-gui:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt 6.8.0 via aqtinstall
+        shell: pwsh
+        run: |
+          pip install aqtinstall
+          aqt install-qt windows desktop 6.8.0 win64_msvc2022_64 -O ${{ runner.temp }}/Qt
+          echo "Qt6_DIR=${{ runner.temp }}/Qt/6.8.0/msvc2022_64" >> $env:GITHUB_ENV
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        with: { arch: x64 }
+
+      - name: Install deps via vcpkg
+        run: |
+          vcpkg install yalantinglibs:x64-windows
+          vcpkg install minizip-ng:x64-windows
+
+      - name: Build QHotKey from source
+        shell: pwsh
+        run: |
+          git clone --depth 1 https://github.com/Skycoder42/QHotkey.git ${{ runner.temp }}/qhotkey
+          cmake -B ${{ runner.temp }}/qhotkey/build -S ${{ runner.temp }}/qhotkey `
+            -DCMAKE_PREFIX_PATH="$env:Qt6_DIR" `
+            -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake `
+            -DQHOTKEY_EXAMPLES=OFF -DQHOTKEY_TESTS=OFF
+          cmake --build ${{ runner.temp }}/qhotkey/build --config Release
+          echo "QHotKey_DIR=${{ runner.temp }}/qhotkey/build" >> $env:GITHUB_ENV
+
+      - name: Configure CMake (gui)
+        run: cmake -B build_gui -DBUILD_GUI=ON -DCMAKE_PREFIX_PATH="${{ env.Qt6_DIR }}" -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+
+      - name: Build
+        run: cmake --build build_gui --config Release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dwrgFpsUnlocker_gui
+          path: build_gui/src_gui/Release/dwrgFpsUnlocker.exe

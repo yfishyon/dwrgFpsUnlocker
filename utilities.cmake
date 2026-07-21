@@ -4,7 +4,12 @@ endmacro()
 
 function(aux_include_directory dir var)
     file(GLOB _files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${dir}/*.h)
-    set(${var} ${_files} PARENT_SCOPE)  # 使用 PARENT_SCOPE 明确设置外部变量
+    set(${var} ${_files} PARENT_SCOPE)
+endfunction()
+
+function(aux_source_directory dir var)
+    file(GLOB _files ${dir}/*.cpp)
+    set(${var} ${_files} PARENT_SCOPE)
 endfunction()
 
 function(check_qt_build_type should_be_static)

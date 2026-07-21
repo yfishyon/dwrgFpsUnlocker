@@ -3,6 +3,7 @@
 //
 #include "winapiutil.h"
 #include <vector>
+#include <cstring>
 
 uintptr_t getProcAddressExBuffered(HANDLE hProcess, uintptr_t moduleBase, const char* symbolName) {
     //获取DOS头
@@ -90,5 +91,58 @@ std::wstring PrintProcessGroups() {
     CloseHandle(tokenHandle);
 
     return ret;
+}
+
+/* 远程内存锚点扫描 */
+uintptr_t ScanRemoteAnchor(HANDLE hProcess, uintptr_t moduleBase, size_t range,
+                           const unsigned char* pattern, size_t patternLen)
+{
+    static const size_t CHUNK = 4096;
+    unsigned char buf[CHUNK];
+    uintptr_t p = moduleBase;
+    uintptr_t end = moduleBase + range;
+
+    while (p + patternLen <= end) {
+        size_t want = CHUNK;
+        if (p + want > end) want = (size_t)(end - p);
+        if (want < patternLen) break;
+
+        SIZE_T got = 0;
+        if (!ReadProcessMemory(hProcess, (LPCVOID)p, buf, want, &got) || got == 0) {
+            p = (p + 0x1000) & ~(uintptr_t)0xFFF;
+            continue;
+        }
+
+        for (size_t i = 0; i + patternLen <= got; ++i) {
+            if (memcmp(buf + i, pattern, patternLen) == 0) {
+                return p + i;
+            }
+        }
+
+        uintptr_t next = p + got;
+        if (next + patternLen > end) break;
+        p = next - (patternLen - 1);
+    }
+    return 0;
+}
+
+/* 远程读取 PE 头中的 SizeOfImage */
+size_t GetRemoteModuleSize(HANDLE hProcess, uintptr_t moduleBase)
+{
+    SIZE_T got = 0;
+    IMAGE_DOS_HEADER dos = {0};
+    if (!ReadProcessMemory(hProcess, (LPCVOID)moduleBase, &dos, sizeof(dos), &got) || got != sizeof(dos))
+        return 0;
+    if (dos.e_magic != IMAGE_DOS_SIGNATURE)
+        return 0;
+
+    IMAGE_NT_HEADERS nt = {0};
+    uintptr_t ntAddr = moduleBase + dos.e_lfanew;
+    if (!ReadProcessMemory(hProcess, (LPCVOID)ntAddr, &nt, sizeof(nt), &got) || got != sizeof(nt))
+        return 0;
+    if (nt.Signature != IMAGE_NT_SIGNATURE)
+        return 0;
+
+    return nt.OptionalHeader.SizeOfImage;
 }
 

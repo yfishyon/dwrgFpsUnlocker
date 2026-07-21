@@ -66,11 +66,11 @@ FpsSetter::FpsSetter(FpsSetter &&right) noexcept
     // right.closeHandle();
     processHandle = right.processHandle;right.processHandle = NULL;
 
-    std::tie(bad, keepaccess, processID, moduleBase, funcaddr, dyrcx, preframerateaddr)
+    std::tie(bad, keepaccess, processID, moduleBase, anchorAddr, frameIntervalAddr, preframerateaddr)
             = std::make_tuple(
             std::move(right.bad),std::move(right.keepaccess),
             std::move(right.processID), std::move(right.moduleBase),
-            std::move(right.funcaddr), std::move(right.dyrcx), std::move(right.preframerateaddr)
+            std::move(right.anchorAddr), std::move(right.frameIntervalAddr), std::move(right.preframerateaddr)
     );
 }
 
@@ -85,12 +85,11 @@ FpsSetter &FpsSetter::operator=(FpsSetter &&right) noexcept {
         processHandle = right.processHandle;right.processHandle = NULL;
 
         autoxprocesstimer = new autoxtimerproxy(this);
-        std::tie(bad, keepaccess, processID, moduleBase, funcaddr, dyrcx, preframerateaddr)
+        std::tie(bad, keepaccess, processID, moduleBase, anchorAddr, frameIntervalAddr, preframerateaddr)
                 = std::make_tuple(
                 std::move(right.bad), std::move(right.keepaccess),
                 std::move(right.processID), std::move(right.moduleBase),
-                std::move(right.funcaddr), std::move(right.dyrcx), std::move(right.preframerateaddr)
-                /* 2025.6.26： dyrcx和pfraddr没有move右侧的(right.~)，因此额外花费2h，记一笔*/
+                std::move(right.anchorAddr), std::move(right.frameIntervalAddr), std::move(right.preframerateaddr)
         );
     }
     return *this;
@@ -111,26 +110,11 @@ bool FpsSetter::setFps(int fps)
     //写入失败则标记bad
     double frametime = 1.0/fps;
 #ifdef USE_LOG
-    qInfo()<<"写入帧数到"<<(dyrcx+FRT_OFFSET)<<"..";
+    qInfo()<<"写入帧时长到"<<Qt::hex<<frameIntervalAddr<<"..";
 #endif
-    if (!WriteProcessMemory(processHandle, (LPVOID)(dyrcx+FRT_OFFSET), &frametime, sizeof(frametime), nullptr)) {
+    if (!WriteProcessMemory(processHandle, (LPVOID)frameIntervalAddr, &frametime, sizeof(frametime), nullptr)) {
         ErrorReporter::receive(ErrorReporter::警告,"无法设置帧率");
-        qCritical()<<"没能写入帧时长)";
-        bebad();
-        return false;
-    }
-
-    float framerate = fps;
-    if (!WriteProcessMemory(processHandle, (LPVOID)(dyrcx+0x80), &framerate, sizeof(framerate), nullptr)) {
-        // ErrorReporter::instance()->receive(ErrorReporter::警告,"不完整的帧率设置");
-        qWarning()<<"没能写入帧数(float)";
-        bebad();
-        return false;
-    }
-
-    if (!WriteProcessMemory(processHandle, (LPVOID)(dyrcx+0x8C), &fps, sizeof(fps), nullptr)) {
-        // ErrorReporter::instance()->receive(ErrorReporter::严重,"不完整的帧率设置");
-        qWarning()<<"没能写入帧数(int)";
+        qCritical()<<"没能写入帧时长";
         bebad();
         return false;
     }
@@ -143,18 +127,19 @@ float FpsSetter::getFps()
     if (!openHandle())
         return 0;
 
-    qInfo()<<"从"<<Qt::hex<<(preframerateaddr+FR_OFFSET)<<Qt::dec<<"读出实时帧率..";
+    double frametime = 0;
+    qInfo()<<"从"<<Qt::hex<<frameIntervalAddr<<"读出帧时长..";
 
-    float framerate{0};
-    if (!ReadProcessMemory(processHandle, (LPVOID)(preframerateaddr+FR_OFFSET), &framerate, sizeof(framerate), nullptr))
+    if (!ReadProcessMemory(processHandle, (LPVOID)frameIntervalAddr, &frametime, sizeof(frametime), nullptr))
     {
-        qWarning()<<"读取实时帧率失败："<<GetLastError();
+        qWarning()<<"读取帧时长失败："<<GetLastError();
         ErrorReporter::receive(ErrorReporter::警告, "无法读取帧率值：");
         bebad();
         return 0;
     }
+    if (frametime == 0.0) return 0.0f;
 
-    return framerate;
+    return (float)(1.0 / frametime);
 }
 
 void FpsSetter::keepAccessible()

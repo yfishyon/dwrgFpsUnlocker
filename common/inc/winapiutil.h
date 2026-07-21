@@ -103,6 +103,13 @@ uintptr_t GetModuleBaseAddress(DWORD processId, const char* moduleName) {
 
 uintptr_t getProcAddressExBuffered(HANDLE hProcess, uintptr_t moduleBase, const char* symbolName);
 
+/* 远程内存锚点扫描: 在 [moduleBase, moduleBase+range) 内找第一个匹配 pattern 的字节串 */
+uintptr_t ScanRemoteAnchor(HANDLE hProcess, uintptr_t moduleBase, size_t range,
+                           const unsigned char* pattern, size_t patternLen);
+
+/* 远程读 PE 头 SizeOfImage, 返回模块映射大小 */
+size_t GetRemoteModuleSize(HANDLE hProcess, uintptr_t moduleBase);
+
 std::wstring PrintProcessGroups();
 
 #endif //DWRGFPSUNLOCKER_WINAPIUTIL_H

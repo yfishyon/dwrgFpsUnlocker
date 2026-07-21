@@ -17,8 +17,13 @@
 
 bool FpsSetter::getAddress() {
 
-    static constexpr char funcname[]            = "PyOS_ReadlineFunctionPointer";
     static constexpr char targetModuleName[]    = "neox_engine.dll";
+
+    /* 锚点: "python" + 10 个 \0 (共 16 字节) */
+    static const unsigned char anchor[16] = {
+        0x70, 0x79, 0x74, 0x68, 0x6F, 0x6E,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
 
     //获取模块地址
     moduleBase = GetModuleBaseAddress(processID, targetModuleName);
@@ -29,43 +34,39 @@ bool FpsSetter::getAddress() {
     }
     qDebug() << "dll基址: " << Qt::hex << moduleBase;
 
-    //查询函数符号地址
+    // 锚点扫描 (前 256MB)
     auto t = clock();
-    funcaddr = getProcAddressExBuffered(processHandle, moduleBase, funcname);
-    if (!funcaddr) {
-        ErrorReporter::receive(ErrorReporter::严重, "无法查询符号");
+    anchorAddr = ScanRemoteAnchor(processHandle, moduleBase, SCAN_RANGE_BYTES, anchor, sizeof(anchor));
+    if (!anchorAddr) {
+        ErrorReporter::receive(ErrorReporter::严重, "无法找到锚点字符串");
         bad = true;
         return false;
     }
-    qDebug()<<"解析文件头用时"<<static_cast<float>(clock() - t)/CLOCKS_PER_SEC;
+    qDebug()<<"锚点扫描用时"<<static_cast<float>(clock() - t)/CLOCKS_PER_SEC;
+    qDebug() << "锚点地址 M: " << Qt::hex << anchorAddr;
 
-    //读取dyrcx
-    if (!ReadProcessMemory(processHandle, (LPCVOID) DYRCX_P_OFFSET, &dyrcx, sizeof(dyrcx),
+    // struct_addr = M - 264, 解引用取 python_host
+    uintptr_t structAddr = anchorAddr - ANCHOR_BACK_OFFSET;
+    uintptr_t pythonHost = 0;
+    if (!ReadProcessMemory(processHandle, (LPCVOID)structAddr, &pythonHost, sizeof(pythonHost),
                            nullptr)) {
-        ErrorReporter::receive(ErrorReporter::严重, "无法获取数组指针");
-        qCritical()<<"读取"<<Qt::hex<<processHandle<<"::"<<(DYRCX_P_OFFSET)<<"失败："<<GetLastError();
+        ErrorReporter::receive(ErrorReporter::严重, "无法读取python_host指针");
+        qCritical()<<"读取"<<Qt::hex<<structAddr<<"失败："<<GetLastError();
         bad = true;
         return false;
     }
-    //还是dyrcx
-    if (!ReadProcessMemory(processHandle, (LPCVOID) (dyrcx + DYRCX_O_OFFSET), &dyrcx, sizeof(dyrcx),
-                           nullptr)) {
-        ErrorReporter::receive(ErrorReporter::严重, "无法获取数组指针");
-        qCritical()<<"读取"<<Qt::hex<<(dyrcx+DYRCX_O_OFFSET)<<"失败："<<GetLastError();
+    if (!pythonHost) {
+        ErrorReporter::receive(ErrorReporter::严重, "python_host为空(游戏可能尚未初始化)");
         bad = true;
         return false;
     }
-    qDebug() << "动态内存地址: " << Qt::hex << dyrcx;
+    qDebug() << "python_host: " << Qt::hex << pythonHost;
 
-    //读取pfraddr
-    if (!ReadProcessMemory(processHandle, (LPCVOID) (dyrcx + PFR_OFFSET), &preframerateaddr, sizeof(preframerateaddr),
-                           nullptr)) {
-        ErrorReporter::receive(ErrorReporter::警告, "无法获取帧率所在内存段的指针");
-        qCritical()<<"读取"<<Qt::hex<<(dyrcx+PFR_OFFSET)<<"失败："<<GetLastError();
-        bad = true;
-        return false;
-    } else
-        qInfo() << "帧率地址: " << Qt::hex << preframerateaddr + FR_OFFSET;
+    // frameIntervalAddr = pythonHost + 0x70
+    frameIntervalAddr = pythonHost + HOST_FIELD_OFFSET;
+    qInfo() << "帧间隔地址: " << Qt::hex << frameIntervalAddr;
+
+    preframerateaddr = 0; // 新版逻辑不使用
 
     return true;
 }

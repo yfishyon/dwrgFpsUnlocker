@@ -5,13 +5,11 @@
 
 #include <windows.h>
 
-/** 地址布局（截至2025.7.2）（'[]'表解引用）
- *              ↓ funcaddr
- * [ [PyOS_ReadlineFunctionPointer+0xA758]
- *            +0x10] ← dyrcx (一段动态内存地址；这样命名只是因为跟踪时用的寄存器几乎都是rcx)
- * [dyrcx+08] + 0x23C  ← 游戏自带检测的帧率地址
- *      ⤒ preframeaddr
- * @ref DevDoc/pointerlink.mmd
+/** 地址布局（新版 fps.exe 逻辑）
+ *  neox_engine.dll 前 256MB 内扫描 16B 锚点 "python\0" + 10 个 \0
+ *              ↓ anchorAddr = M
+ *  [M - 264] → *(QWORD*) → python_host
+ *                         → python_host + 0x70 → frameIntervalAddr (double 帧时长)
  */
 class FpsSetter
 {
@@ -41,16 +39,15 @@ protected:
     DWORD       processID;
     HANDLE      processHandle;
     uintptr_t   moduleBase;
-    uintptr_t   funcaddr;
-    uintptr_t   dyrcx;
-#define DYRCX_P_OFFSET  (funcaddr + 0xA758)
-#define DYRCX_O_OFFSET   0x10
+    uintptr_t   anchorAddr;          /* M: "python\0" 锚点匹配地址 */
+    uintptr_t   frameIntervalAddr;    /* python_host + 0x70: 帧时长 double 写入地址 */
+#define ANCHOR_BACK_OFFSET  264
+#define HOST_FIELD_OFFSET   0x70
+#define SCAN_RANGE_BYTES    0x10000000
 
-    uintptr_t   preframerateaddr;
+    uintptr_t   preframerateaddr;    /* 保留兼容; 新版逻辑不使用 */
 #define PFR_OFFSET       0x8
 #define FR_OFFSET        0x23C
-
-#define FRT_OFFSET       0x68
 
     friend class autoxtimerproxy;
     autoxtimerproxy* autoxprocesstimer;
