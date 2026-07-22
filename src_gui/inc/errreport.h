@@ -46,9 +46,4 @@ explicit
 private slots:
     static void showError(const ErrorInfo& einf);
 };
-
-template <typename>
-constexpr auto ErrorReporter::qt_create_metaobjectdata()
-{
-}
 #endif

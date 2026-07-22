@@ -5,6 +5,7 @@
 
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QJsonDocument>
 #include <QDesktopServices>
 #include <QStandardPaths>
 #include <QProcess>
