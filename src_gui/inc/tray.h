@@ -5,7 +5,9 @@
 #ifndef DWRGFPSUNLOCKER_TRAY_H
 #define DWRGFPSUNLOCKER_TRAY_H
 
+#if !defined(CI)
 #include "storage.h"
+#endif
 
 #include <QMenu>
 #include <QSystemTrayIcon>
