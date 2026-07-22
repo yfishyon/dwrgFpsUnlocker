@@ -42,7 +42,7 @@ jobs:
         with: { arch: x64 }
 
       - name: Install deps via vcpkg
-        run: vcpkg install yalantinglibs:x64-windows
+        run: vcpkg install yalantinglibs:x64-windows --head
 
       - name: Build QHotKey (Qt6)
         run: |
