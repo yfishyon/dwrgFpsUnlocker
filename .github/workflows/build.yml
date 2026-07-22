@@ -52,7 +52,7 @@ jobs:
           cmake --install C:/qhotkey/build --prefix C:/qhotkey/install
 
       - name: Configure CMake (gui)
-        run: cmake -B build_gui -DBUILD_GUI=ON -DBUILD_SINGLE=ON -DCMAKE_PREFIX_PATH="C:/Qt/6.8.0/msvc2022_64;C:/qhotkey/install" -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+        run: cmake -B build_gui -DBUILD_GUI=ON -DBUILD_SINGLE=ON -DCMAKE_PREFIX_PATH="C:/Qt/6.8.0/msvc2022_64;C:/qhotkey/install" -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_CXX_FLAGS=/DCI
 
       - name: Build
         run: cmake --build build_gui --config Release

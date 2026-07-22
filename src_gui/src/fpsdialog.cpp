@@ -3,7 +3,9 @@
 #include "version.h"
 
 #include "errreport.h"
+#if !defined(CI)
 #include "storage.h"
+#endif
 #include "fpssetter.h"
 
 #include <QRandomGenerator>
@@ -186,6 +188,7 @@ void FpsDialog::dissmissFR()
 
 void FpsDialog::savepreset()const
 {
+#if !defined(CI)
     if(! ui->autoappradio->isChecked())return ;
 
     Storage<hipp, "hipp"> hipp;
@@ -197,6 +200,7 @@ void FpsDialog::savepreset()const
         bool checked = ui->autoappradio->isChecked();
         hipp.save<&hipp::checked>(checked);
     }
+#endif
 }
 
 // 翻转字节序
@@ -210,6 +214,7 @@ T swapEndian(T value) {
 }
 
 bool FpsDialog::loadpreset() {
+#if !defined(CI)
     //如果存在hipp文件 (有过记录)
     Storage<hipp, "hipp"> hipp;
     if(hipp.exist())
@@ -238,6 +243,7 @@ bool FpsDialog::loadpreset() {
             return false;
         }
     }
+#endif
     return true;
 }
 
