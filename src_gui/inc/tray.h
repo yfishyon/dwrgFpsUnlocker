@@ -20,7 +20,9 @@ public:
     {
         setIcon(QIcon(":/纯彩mini.ico"));
         traymenu = new QMenu();
+#if !defined(CI)
         traymenu->addAction("重置", &Storage<hipp,"hipp">::clear);
+#endif
         traymenu->addAction("退出", &QApplication::quit);
         setContextMenu(traymenu);
     }
