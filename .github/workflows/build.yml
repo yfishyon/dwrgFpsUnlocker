@@ -36,7 +36,7 @@ jobs:
       - name: Install Qt 6.8.0 via aqtinstall
         run: |
           pip install aqtinstall
-          aqt install-qt windows desktop 6.8.0 win64_msvc2022_64 -O C:/Qt
+          aqt install-qt windows desktop 6.8.2 win64_msvc2022_64 -O C:/Qt
 
       - uses: ilammy/msvc-dev-cmd@v1
         with: { arch: x64 }
@@ -47,12 +47,12 @@ jobs:
       - name: Build QHotKey (Qt6)
         run: |
           git clone --depth 1 https://github.com/Skycoder42/QHotkey.git C:/qhotkey
-          cmake -B C:/qhotkey/build -S C:/qhotkey -DCMAKE_PREFIX_PATH=C:/Qt/6.8.0/msvc2022_64 -DQT_DEFAULT_MAJOR_VERSION=6
+          cmake -B C:/qhotkey/build -S C:/qhotkey -DCMAKE_PREFIX_PATH=C:/Qt/6.8.2/msvc2022_64 -DQT_DEFAULT_MAJOR_VERSION=6
           cmake --build C:/qhotkey/build --config Release
           cmake --install C:/qhotkey/build --prefix C:/qhotkey/install
 
       - name: Configure CMake (gui)
-        run: cmake -B build_gui -DBUILD_GUI=ON -DBUILD_SINGLE=ON -DCMAKE_PREFIX_PATH="C:/Qt/6.8.0/msvc2022_64;C:/qhotkey/install" -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_CXX_FLAGS=/DCI
+        run: cmake -B build_gui -DBUILD_GUI=ON -DBUILD_SINGLE=ON -DCMAKE_PREFIX_PATH="C:/Qt/6.8.2/msvc2022_64;C:/qhotkey/install" -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_CXX_FLAGS=/DCI
 
       - name: Build
         run: cmake --build build_gui --config Release
