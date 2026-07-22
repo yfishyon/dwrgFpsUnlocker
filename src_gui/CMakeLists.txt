@@ -50,8 +50,11 @@ target_compile_definitions(dwrgFpsUnlocker PRIVATE
         $<$<BOOL:${USE_LOG}>:USE_LOG>
         $<$<BOOL:${PRE_RELEASE}>:PRE_RELEASE>
         $<$<BOOL:${BUILTIN_MT}>:BUILTIN_MT>
-        $<$<BOOL:${CI_BUILD}>:CI>
 )
+
+if(CI_BUILD)
+    target_compile_definitions(dwrgFpsUnlocker PRIVATE CI)
+endif()
 target_link_libraries(dwrgFpsUnlocker PRIVATE
         Qt6::Widgets Qt6::Network
         qhotkey
